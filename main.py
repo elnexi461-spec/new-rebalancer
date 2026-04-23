@@ -834,48 +834,27 @@ class RebalancingBot:
 # ---------------------------------------------------------------------------
 
 def await_secrets() -> Secrets | None:
-    owner_private_key = os.getenv("OWNER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
-    rpc_url = os.getenv("RPC_URL", BASE_PUBLIC_RPC)
-    base_aave_hands_address = os.getenv("BASE_AAVE_HANDS_ADDRESS") or os.getenv("CONTRACT_ADDRESS")
-    flash_receiver_address = os.getenv("FLASH_RECEIVER_ADDRESS")
-    graph_api_key = os.getenv("GRAPH_API_KEY")
-
-    if not owner_private_key or not base_aave_hands_address:
+    pk = os.getenv("OWNER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
+    rpc = os.getenv("RPC_URL", BASE_PUBLIC_RPC)
+    addr = os.getenv("BASE_AAVE_HANDS_ADDRESS") or os.getenv("CONTRACT_ADDRESS")
+    
+    if not pk or not addr:
         print("CRITICAL: Missing PRIVATE_KEY or CONTRACT_ADDRESS in environment.")
         return None
 
     return Secrets(
-        owner_private_key=owner_private_key,
-        rpc_url=rpc_url,
-        base_aave_hands_address=base_aave_hands_address,
-        flash_receiver_address=flash_receiver_address,
-        graph_api_key=graph_api_key,
+        owner_private_key=normalize_private_key(str(pk)),
+        rpc_url=str(rpc),
+        base_aave_hands_address=str(addr),
+        flash_receiver_address=os.getenv("FLASH_RECEIVER_ADDRESS"),
+        graph_api_key=os.getenv("GRAPH_API_KEY"),
     )
-        missing = [
-            name
-            for name, value in {
-                "PRIVATE_KEY": owner_private_key,
-                "BASE_AAVE_HANDS_ADDRESS": base_aave_hands_address,
-            }.items()
-            if not value
-        ]
 
-        if not missing:
-            return Secrets(
-                owner_private_key=normalize_private_key(str(owner_private_key)),
-                rpc_url=str(rpc_url),
-                base_aave_hands_address=str(base_aave_hands_address),
-                flash_receiver_address=flash_receiver_address,
-                graph_api_key=graph_api_key,
-            )
-        print(
-            "Awaiting Secrets: "
-            f"missing {', '.join(missing)}. "
-            "Add the secrets and the bot will continue automatically.",
-            flush=True,
-        )
-        time.sleep(HEARTBEAT_SECONDS)
-
+def normalize_private_key(value: str) -> str:
+    normalized = value if value.startswith("0x") else f"0x{value}"
+    if len(normalized) != 66:
+        raise RuntimeError("PRIVATE_KEY must be a 32-byte hex value")
+    return normalized
 
 def normalize_private_key(value: str) -> str:
     normalized = value if value.startswith("0x") else f"0x{value}"
