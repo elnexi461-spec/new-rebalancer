@@ -43,7 +43,7 @@ getcontext().prec = 60
 # Configuration
 # ---------------------------------------------------------------------------
 
-DRY_RUN = os.getenv("DRY_RUN", "false").lower() == "true"
+DRY_RUN = False
 AUTO_LIVE = os.getenv("AUTO_LIVE", "false").lower() == "true"
 AUTO_LIVE_CYCLES = int(os.getenv("AUTO_LIVE_CYCLES", "3"))
 
@@ -87,7 +87,7 @@ QUIET_LOGS = os.getenv("QUIET_LOGS", "true").lower() != "false"
 V3_FEE_TIER = int(os.getenv("V3_FEE_TIER", "500"))
 AERODROME_STABLE = os.getenv("AERODROME_STABLE", "false").lower() == "true"
 SLIPPAGE_LEG1 = Decimal(os.getenv("SLIPPAGE_LEG1", "0.01"))
-AAVE_PREMIUM_BPS = int(os.getenv("AAVE_PREMIUM_BPS", "5"))
+AAVE_PREMIUM_BPS = int(os.getenv("AAVE_PREMIUM_BPS", "9"))
 PROFIT_BUFFER_BPS = int(os.getenv("PROFIT_BUFFER_BPS", "1"))
 # Cap each trade's USDC notional. The bot's `calculate_rebalance` sizes to
 # fully close the gap, but actual arb profit gets eaten by price impact at
@@ -565,7 +565,7 @@ class RebalancingBot:
             amount_raw = int(amount_human * (Decimal(10) ** USDC_DECIMALS))
             price_impact = amount_human / state.usdc_reserve
 
-        usd_per_eth = Decimal(os.getenv("USD_PER_ETH", "3000"))
+        usd_per_eth = Decimal("2350")
         gross_profit_eth = abs(delta_usdc) * Decimal("0.0005") / usd_per_eth
         projected_profit = max(Decimal("0"), gross_profit_eth - expected_gas_cost_eth)
 
@@ -834,13 +834,23 @@ class RebalancingBot:
 # ---------------------------------------------------------------------------
 
 def await_secrets() -> Secrets | None:
-    while True:
-        owner_private_key = os.getenv("OWNER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
-        rpc_url = os.getenv("RPC_URL", BASE_PUBLIC_RPC)
-        base_aave_hands_address = os.getenv("BASE_AAVE_HANDS_ADDRESS")
-        flash_receiver_address = os.getenv("FLASH_RECEIVER_ADDRESS")
-        graph_api_key = os.getenv("GRAPH_API_KEY")
+    owner_private_key = os.getenv("OWNER_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
+    rpc_url = os.getenv("RPC_URL", BASE_PUBLIC_RPC)
+    base_aave_hands_address = os.getenv("BASE_AAVE_HANDS_ADDRESS") or os.getenv("CONTRACT_ADDRESS")
+    flash_receiver_address = os.getenv("FLASH_RECEIVER_ADDRESS")
+    graph_api_key = os.getenv("GRAPH_API_KEY")
 
+    if not owner_private_key or not base_aave_hands_address:
+        print("CRITICAL: Missing PRIVATE_KEY or CONTRACT_ADDRESS in environment.")
+        return None
+
+    return Secrets(
+        owner_private_key=owner_private_key,
+        rpc_url=rpc_url,
+        base_aave_hands_address=base_aave_hands_address,
+        flash_receiver_address=flash_receiver_address,
+        graph_api_key=graph_api_key,
+    )
         missing = [
             name
             for name, value in {
