@@ -43,7 +43,7 @@ getcontext().prec = 60
 # Configuration
 # ---------------------------------------------------------------------------
 
-DRY_RUN = os.getenv("DRY_RUN", "true").lower() != "false"
+DRY_RUN = os.getenv("DRY_RUN", "false").lower() == "true"
 AUTO_LIVE = os.getenv("AUTO_LIVE", "false").lower() == "true"
 AUTO_LIVE_CYCLES = int(os.getenv("AUTO_LIVE_CYCLES", "3"))
 
